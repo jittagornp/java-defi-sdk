@@ -4,11 +4,13 @@
 package me.jittagornp.defi;
 
 import me.jittagornp.defi.model.TokenInfo;
+import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -55,5 +57,7 @@ public interface DeFi {
     CompletableFuture<TransactionReceipt> tokenSwapAndAutoApprove(final String router, final String tokenA, final String tokenB, final BigDecimal amount);
 
     CompletableFuture<TransactionReceipt> fillGas(final String token, final BigDecimal amount);
+
+    void onBlock(final Consumer<EthBlock.Block> consumer);
 
 }

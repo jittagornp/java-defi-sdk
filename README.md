@@ -133,6 +133,14 @@ CompletableFuture<TransactionReceipt> tokenSwap(final String router, final Strin
 CompletableFuture<TransactionReceipt> fillGas(final String token, final BigDecimal amount);
 ```
 
+### On Block
+
+เรียกเมื่อมี Block เกิดใหม่
+
+```java
+void onBlock(final Consumer<EthBlock.Block> consumer);
+```
+
 ลองเอาไปประยุกต์ใช้ตามความต้องการตัวเองดูน่ะ
 
 # คำศัพท์ 

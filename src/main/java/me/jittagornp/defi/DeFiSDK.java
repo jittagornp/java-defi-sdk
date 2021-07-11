@@ -5,6 +5,7 @@ package me.jittagornp.defi;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.reactivex.disposables.Disposable;
 import me.jittagornp.defi.exception.ResponseErrorException;
 import me.jittagornp.defi.model.TokenInfo;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import org.web3j.protocol.Web3jService;
 import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.Response;
 import org.web3j.protocol.core.methods.request.Transaction;
+import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.protocol.http.HttpService;
@@ -34,6 +36,8 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -52,6 +56,7 @@ public class DeFiSDK implements DeFi {
     private final TransactionManager transactionManager;
     private final ContractGasProvider gasProvider = new DefaultGasProvider();
     private final Map<String, Object> cached = new HashMap<>();
+    private Disposable subscribe;
 
     protected DeFiSDK(final Credentials credentials, final Web3jService web3jService) {
         this.credentials = credentials;
@@ -402,4 +407,19 @@ public class DeFiSDK implements DeFi {
         );
     }
 
+    @Override
+    public void onBlock(final Consumer<EthBlock.Block> consumer) {
+        if (subscribe != null) {
+            subscribe.dispose();
+        }
+        subscribe = web3j.blockFlowable(false)
+                .throttleWithTimeout(300, TimeUnit.MILLISECONDS)
+                .doOnNext(new io.reactivex.functions.Consumer<EthBlock>() {
+                    @Override
+                    public void accept(final EthBlock ethBlock) throws Exception {
+                        consumer.accept(ethBlock.getBlock());
+                    }
+                })
+                .subscribe();
+    }
 }

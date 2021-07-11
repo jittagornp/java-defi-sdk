@@ -50,6 +50,7 @@ public class DeFiTest {
         //defi.tokenSwap(pancakeSwapRouter, BUSD, WBNB, defi.getTokenBalance(BUSD).get()).thenAccept(log("Swap Tx")).get();
         //defi.tokenSwap(pancakeSwapRouter, WBNB, BUSD, defi.getTokenBalance(WBNB).get()).thenAccept(log("Swap Tx")).get();
         //defi.fillGas(WBNB, defi.getTokenBalance(WBNB).get()).thenAccept(log("Fill Gas Tx")).get();
+        defi.onBlock(block -> log("Block number").accept(block.getNumber()));
     }
 
     private static <T> Consumer<T> log(final String message) {
