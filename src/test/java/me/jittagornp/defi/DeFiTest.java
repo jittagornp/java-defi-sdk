@@ -43,12 +43,12 @@ public class DeFiTest {
         defi.getTokenInfo(BUSD, BUSD, pancakeSwapFactory).thenAccept(log("BUSD")).get();
         defi.getTokenAllowance(BUSD, pancakeSwapRouter).thenAccept(log("Token allowance")).get();
         //defi.tokenApprove(BUSD, BigDecimal.valueOf(2.433), pancakeSwapRouter).thenAccept(log("Approve Tx")).get();
-        //defi.swapToken(pancakeSwapRouter, WBNB, BUSD, BigDecimal.valueOf(5.8)).thenAccept(log("Swap Tx")).get();
-        //defi.swapTokenAndAutoApprove(pancakeSwapRouter, WBNB, BUSD, BigDecimal.valueOf(5.8)).thenAccept(log("Swap Tx")).get();
+        //defi.tokenSwap(pancakeSwapRouter, WBNB, BUSD, BigDecimal.valueOf(5.8)).thenAccept(log("Swap Tx")).get();
+        //defi.tokenSwapAndAutoApprove(pancakeSwapRouter, WBNB, BUSD, BigDecimal.valueOf(5.8)).thenAccept(log("Swap Tx")).get();
         //defi.tokenTransfer(WBNB, "<Target>", BigDecimal.valueOf(0.0013)).thenAccept(log("Transfer Tx")).get();
         //defi.tokenApprove(WBNB, BigDecimal.TEN, pancakeSwapRouter).thenAccept(log("Token Approve Tx")).get();
-        //defi.swapToken(pancakeSwapRouter, BUSD, WBNB, defi.getTokenBalance(BUSD).get()).thenAccept(log("Swap Tx")).get();
-        //defi.swapToken(pancakeSwapRouter, WBNB, BUSD, defi.getTokenBalance(WBNB).get()).thenAccept(log("Swap Tx")).get();
+        //defi.tokenSwap(pancakeSwapRouter, BUSD, WBNB, defi.getTokenBalance(BUSD).get()).thenAccept(log("Swap Tx")).get();
+        //defi.tokenSwap(pancakeSwapRouter, WBNB, BUSD, defi.getTokenBalance(WBNB).get()).thenAccept(log("Swap Tx")).get();
         //defi.fillGas(WBNB, defi.getTokenBalance(WBNB).get()).thenAccept(log("Fill Gas Tx")).get();
     }
 

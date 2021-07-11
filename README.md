@@ -118,12 +118,12 @@ CompletableFuture<TransactionReceipt> tokenTransfer(final String token, String r
 CompletableFuture<TransactionReceipt> tokenApprove(final String token, final BigDecimal amount, final String contractAddress);
 ```
 
-### Swap Token
+### Token Swap
 
 การแลกเปลี่ยน (Swap) Token จาก A -> B บน Router (DEX/AMM)
 
 ```java
-CompletableFuture<TransactionReceipt> swapToken(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage, final int deadlineMinutes);
+CompletableFuture<TransactionReceipt> tokenSwap(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage, final int deadlineMinutes);
 ```
 
 ### Fill Gas

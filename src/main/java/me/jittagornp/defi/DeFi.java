@@ -42,17 +42,17 @@ public interface DeFi {
 
     CompletableFuture<TransactionReceipt> tokenApprove(final String token, final BigDecimal amount, final String contractAddress);
 
-    CompletableFuture<TransactionReceipt> swapToken(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage, final int deadlineMinutes);
+    CompletableFuture<TransactionReceipt> tokenSwap(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage, final int deadlineMinutes);
 
-    CompletableFuture<TransactionReceipt> swapToken(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage);
+    CompletableFuture<TransactionReceipt> tokenSwap(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage);
 
-    CompletableFuture<TransactionReceipt> swapToken(final String router, final String tokenA, final String tokenB, final BigDecimal amount);
+    CompletableFuture<TransactionReceipt> tokenSwap(final String router, final String tokenA, final String tokenB, final BigDecimal amount);
 
-    CompletableFuture<TransactionReceipt> swapTokenAndAutoApprove(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage, final int deadlineMinutes);
+    CompletableFuture<TransactionReceipt> tokenSwapAndAutoApprove(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage, final int deadlineMinutes);
 
-    CompletableFuture<TransactionReceipt> swapTokenAndAutoApprove(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage);
+    CompletableFuture<TransactionReceipt> tokenSwapAndAutoApprove(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage);
 
-    CompletableFuture<TransactionReceipt> swapTokenAndAutoApprove(final String router, final String tokenA, final String tokenB, final BigDecimal amount);
+    CompletableFuture<TransactionReceipt> tokenSwapAndAutoApprove(final String router, final String tokenA, final String tokenB, final BigDecimal amount);
 
     CompletableFuture<TransactionReceipt> fillGas(final String token, final BigDecimal amount);
 
