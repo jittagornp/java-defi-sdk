@@ -1,4 +1,4 @@
-# Java Defi-SDK
+# Java DeFi-SDK
 
 ![](./DeFi.jpeg)
 
