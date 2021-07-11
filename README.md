@@ -30,7 +30,7 @@ Run code
 
 จะแสดงค่า Token ต่าง ๆ ออกมา
 
-# การใช้งาน
+# การใช้งาน (How to use)
 
 ```java
 final String WALLET_DIRECTORY = System.getProperty("user.home") + "/crypto-wallet";
