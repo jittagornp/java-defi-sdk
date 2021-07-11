@@ -417,7 +417,9 @@ public class DeFiSDK implements DeFi {
                 .doOnNext(new io.reactivex.functions.Consumer<EthBlock>() {
                     @Override
                     public void accept(final EthBlock ethBlock) throws Exception {
-                        consumer.accept(ethBlock.getBlock());
+                        if (ethBlock.getError() == null) {
+                            consumer.accept(ethBlock.getBlock());
+                        }
                     }
                 })
                 .subscribe();
