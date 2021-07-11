@@ -8,10 +8,10 @@
 
 ### 1. สร้าง Wallet (Generate Your Wallet)
 
-Run code
+Run [code](src/test/java/me/jittagornp/defi/GenerateWallet.java)
 
 ```
-/src/main/test/java/me/jittagornp/defi/GenerateWallet.java
+/src/test/java/me/jittagornp/defi/GenerateWallet.java
 ```
 
 ก็จะได้ Wallet เป็นไฟล์ .json ขึ้นมาอยู่ใน Path ~/crypto-wallet/ (Home Directory)
@@ -22,10 +22,10 @@ Run code
 
 ### 2. ทดสอบ
 
-Run code
+Run [code](src/test/java/me/jittagornp/defi/DeFiTest.java)
 
 ```
-/src/main/test/java/me/jittagornp/defi/DeFiTest.java
+/src/test/java/me/jittagornp/defi/DeFiTest.java
 ```
 
 จะแสดงค่า Token ต่าง ๆ ออกมา
