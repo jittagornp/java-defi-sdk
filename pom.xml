@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>me.jittagornp.defi</groupId>
-    <artifactId>defi-sdk</artifactId>
+    <artifactId>java-defi-sdk</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
