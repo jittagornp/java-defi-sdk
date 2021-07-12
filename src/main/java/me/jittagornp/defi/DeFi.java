@@ -58,6 +58,8 @@ public interface DeFi {
 
     CompletableFuture<TransactionReceipt> fillGas(final String token, final BigDecimal amount);
 
+    void onBlock(final Consumer<EthBlock.Block> consumer, final long throttleMillisec);
+
     void onBlock(final Consumer<EthBlock.Block> consumer);
 
 }

@@ -408,12 +408,12 @@ public class DeFiSDK implements DeFi {
     }
 
     @Override
-    public void onBlock(final Consumer<EthBlock.Block> consumer) {
+    public void onBlock(final Consumer<EthBlock.Block> consumer, final long throttleMillisec) {
         if (subscribe != null) {
             subscribe.dispose();
         }
         subscribe = web3j.blockFlowable(false)
-                .throttleWithTimeout(300, TimeUnit.MILLISECONDS)
+                .throttleWithTimeout(throttleMillisec, TimeUnit.MILLISECONDS)
                 .doOnNext(new io.reactivex.functions.Consumer<EthBlock>() {
                     @Override
                     public void accept(final EthBlock ethBlock) throws Exception {
@@ -423,5 +423,10 @@ public class DeFiSDK implements DeFi {
                     }
                 })
                 .subscribe();
+    }
+
+    @Override
+    public void onBlock(final Consumer<EthBlock.Block> consumer) {
+        onBlock(consumer, 300);
     }
 }
