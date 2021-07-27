@@ -18,6 +18,17 @@ import java.util.function.Function;
  */
 public interface DeFi {
 
+    enum Network {
+        BSC_MAINNET,
+        POLYGON_MAINNET
+    }
+
+    Network getNetwork();
+
+    String getWalletAddress();
+
+    String getWalletShortAddress();
+
     DeFi setDefaultSwapDeadlineMinutes(final int swapDeadlineMinutes);
 
     DeFi setDefaultSwapSlippage(final double swapSlippage);
@@ -32,13 +43,19 @@ public interface DeFi {
 
     CompletableFuture<TransactionReceipt> tokenTransfer(final String token, String recipient, final BigDecimal amount);
 
-    CompletableFuture<BigDecimal> getTokenPrice(final String tokenA, final String tokenB, final String factory);
+    CompletableFuture<BigDecimal> getTokenAmountsOut(final String router, final String tokenA, final String tokenB, final BigDecimal amount);
 
-    CompletableFuture<TokenInfo> getTokenInfo(final String token, final String tokenPair, final String factory);
+    CompletableFuture<BigDecimal> getTokenAmountsOutMin(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage);
 
-    CompletableFuture<List<TokenInfo>> getTokenInfoList(final List<String> tokens, final Function<String, String> tokenPair, final Function<String, String> tokenFactory);
+    CompletableFuture<BigDecimal> getTokenAmountsOutMin(final String router, final String tokenA, final String tokenB, final BigDecimal amount);
 
-    CompletableFuture<List<TokenInfo>> getTokenInfoList(final List<String> tokens, final String tokenPair, final String factory);
+    CompletableFuture<BigDecimal> getTokenPrice(final String tokenA, final String tokenB, final String router);
+
+    CompletableFuture<TokenInfo> getTokenInfo(final String token, final String tokenPair, final String router);
+
+    CompletableFuture<List<TokenInfo>> getTokenInfoList(final List<String> tokens, final Function<String, String> tokenPair, final Function<String, String> tokenRouter);
+
+    CompletableFuture<List<TokenInfo>> getTokenInfoList(final List<String> tokens, final String tokenPair, final String router);
 
     CompletableFuture<BigDecimal> getTokenAllowance(final String token, final String contractAddress);
 
@@ -56,10 +73,11 @@ public interface DeFi {
 
     CompletableFuture<TransactionReceipt> tokenSwapAndAutoApprove(final String router, final String tokenA, final String tokenB, final BigDecimal amount);
 
-    CompletableFuture<TransactionReceipt> fillGas(final String token, final BigDecimal amount);
+    CompletableFuture<TransactionReceipt> fillGas(final String gasToken, final BigDecimal amount);
+
+    CompletableFuture<TransactionReceipt> tokenSwapAndFillGas(final String router, final String token, final String gasToken, final BigDecimal amount);
 
     void onBlock(final Consumer<EthBlock.Block> consumer, final long throttleMillisec);
 
     void onBlock(final Consumer<EthBlock.Block> consumer);
-
 }

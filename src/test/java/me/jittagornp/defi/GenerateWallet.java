@@ -3,6 +3,7 @@
  */
 package me.jittagornp.defi;
 
+import lombok.extern.slf4j.Slf4j;
 import org.web3j.crypto.WalletUtils;
 
 import java.io.File;
@@ -10,6 +11,7 @@ import java.io.File;
 /**
  * @author jittagornp
  */
+@Slf4j
 public class GenerateWallet {
 
     private static final String WALLET_DIRECTORY = System.getProperty("user.home") + "/crypto-wallet";
@@ -20,6 +22,7 @@ public class GenerateWallet {
         if (!directory.exists()) {
             directory.mkdirs();
         }
-        WalletUtils.generateNewWalletFile(WALLET_PASSWORD, directory);
+        final String outputFile = WalletUtils.generateNewWalletFile(WALLET_PASSWORD, directory);
+        log.info("Output file => {}", outputFile);
     }
 }

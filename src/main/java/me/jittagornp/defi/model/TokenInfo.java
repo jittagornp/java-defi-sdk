@@ -32,4 +32,6 @@ public class TokenInfo {
 
     private BigDecimal value;
 
+    private String valueSymbol;
+
 }
