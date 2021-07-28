@@ -317,9 +317,6 @@ public class DeFiSDK implements DeFi {
 
     @Override
     public CompletableFuture<BigDecimal> getTokenAmountsOut(final String swapRouter, final String tokenA, final String tokenB, final BigDecimal amount) {
-        if (Objects.equals(tokenA, tokenB)) {
-            return CompletableFuture.completedFuture(BigDecimal.ONE);
-        }
         final CompletableFuture<BigInteger> tokenADecimals = _getDecimals(tokenA);
         final CompletableFuture<BigInteger> tokenBDecimals = _getDecimals(tokenB);
         return CompletableFuture.allOf(tokenADecimals, tokenBDecimals)
@@ -338,13 +335,7 @@ public class DeFiSDK implements DeFi {
         return getTokenAmountsOutMin(swapRouter, tokenA, tokenB, amount, defaultSwapSlippage);
     }
 
-    private CompletableFuture<BigDecimal> _getTokenPrice(
-            final String tokenA,
-            final BigInteger tokenADecimals,
-            final String tokenB,
-            final BigInteger tokenBDecimals,
-            final String swapRouter
-    ) {
+    private CompletableFuture<BigDecimal> _getTokenPrice(final String tokenA, final BigInteger tokenADecimals, final String tokenB, final BigInteger tokenBDecimals, final String swapRouter) {
         return _getTokenAmountsOut(swapRouter, tokenA, tokenADecimals, tokenB, tokenBDecimals, BigDecimal.ONE);
     }
 
