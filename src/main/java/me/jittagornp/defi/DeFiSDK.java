@@ -148,13 +148,16 @@ public class DeFiSDK implements DeFi {
         return contract;
     }
 
-    private BigDecimal _fromWei(final BigInteger value) {
-        return Convert.fromWei(value.toString(), Convert.Unit.ETHER);
+    private BigDecimal _fromWei(final BigInteger value, final BigInteger decimals) {
+        final BigDecimal val = new BigDecimal(value.toString());
+        final int d = decimals.intValue();
+        return val.divide(BigDecimal.TEN.pow(d));
     }
 
-    private BigInteger _toWei(final BigDecimal value) {
-        return Convert.toWei(value.toString(), Convert.Unit.ETHER)
-                .toBigInteger();
+    private BigInteger _toWei(final BigDecimal value, final BigInteger decimals) {
+        final BigInteger val = new BigInteger(value.toString());
+        final int d = decimals.intValue();
+        return val.multiply(BigInteger.TEN.pow(d));
     }
 
     private BigDecimal _fromGwei(final BigInteger ether) {
@@ -173,32 +176,88 @@ public class DeFiSDK implements DeFi {
         return response;
     }
 
+    private CompletableFuture<BigDecimal> _getTokenTotalSupply(final String token, final BigInteger decimals) {
+        return _loadContract(ERC20.class, token)
+                .totalSupply().sendAsync()
+                .thenApply(totalSupply -> _fromWei(totalSupply, decimals));
+    }
+
+    private CompletableFuture<BigInteger> _getDecimals(final String token) {
+        final String key = token + ".decimals";
+        final BigInteger decimals = (BigInteger) cached.get(key);
+        if (decimals == null) {
+            return _loadContract(ERC20.class, token)
+                    .decimals()
+                    .sendAsync()
+                    .thenApply(value -> {
+                        cached.put(key, value);
+                        return value;
+                    });
+        } else {
+            return CompletableFuture.completedFuture(decimals);
+        }
+    }
+
+    private CompletableFuture<String> _getName(final String token) {
+        final String key = token + ".name";
+        final String name = (String) cached.get(key);
+        if (name == null) {
+            return _loadContract(ERC20.class, token)
+                    .name()
+                    .sendAsync()
+                    .thenApply(value -> {
+                        cached.put(key, value);
+                        return value;
+                    });
+        } else {
+            return CompletableFuture.completedFuture(name);
+        }
+    }
+
+    private CompletableFuture<String> _getSymbol(final String token) {
+        final String key = token + ".symbol";
+        final String symbol = (String) cached.get(key);
+        if (symbol == null) {
+            return _loadContract(ERC20.class, token)
+                    .symbol()
+                    .sendAsync()
+                    .thenApply(value -> {
+                        cached.put(key, value);
+                        return value;
+                    });
+        } else {
+            return CompletableFuture.completedFuture(symbol);
+        }
+    }
+
     @Override
-    public CompletableFuture<TokenInfo> getTokenInfo(final String token, final String tokenPair, final String swapRouter) {
-        final ERC20 erc20 = _loadContract(ERC20.class, token);
-        final ERC20 erc20Pair = _loadContract(ERC20.class, tokenPair);
-        final CompletableFuture<String> name = erc20.name().sendAsync();
-        final CompletableFuture<String> symbol = erc20.symbol().sendAsync();
-        final CompletableFuture<BigInteger> totalSupply = erc20.totalSupply().sendAsync();
-        final CompletableFuture<BigDecimal> balanceOf = erc20.balanceOf(credentials.getAddress()).sendAsync().thenApply(this::_fromWei);
-        final CompletableFuture<BigDecimal> price = getTokenPrice(token, tokenPair, swapRouter);
-        final CompletableFuture<BigInteger> decimals = erc20.decimals().sendAsync();
-        final CompletableFuture<String> pairSymbol = erc20Pair.symbol().sendAsync();
-        return CompletableFuture.allOf(name, symbol, totalSupply, balanceOf, price, decimals)
-                .thenApply(result -> {
-                    final BigDecimal balance = _get(balanceOf);
-                    final BigDecimal p = _get(price);
-                    return TokenInfo.builder()
-                            .address(token)
-                            .name(_get(name))
-                            .symbol(_get(symbol))
-                            .totalSupply(_fromWei(_get(totalSupply)))
-                            .balance(_get(balanceOf))
-                            .price(_get(price))
-                            .decimals(_get(decimals))
-                            .value(balance.multiply(p))
-                            .valueSymbol(_get(pairSymbol))
-                            .build();
+    public CompletableFuture<TokenInfo> getTokenInfo(final String token, final String tokenPair, final String swap) {
+        final CompletableFuture<BigInteger> decimals = _getDecimals(token);
+        final CompletableFuture<BigInteger> pairDecimals = _getDecimals(tokenPair);
+        return CompletableFuture.allOf(decimals, pairDecimals)
+                .thenCompose(none -> {
+                    final CompletableFuture<String> name = _getName(token);
+                    final CompletableFuture<String> symbol = _getSymbol(token);
+                    final CompletableFuture<BigDecimal> totalSupply = _getTokenTotalSupply(token, _get(decimals));
+                    final CompletableFuture<BigDecimal> balanceOf = _getTokenBalance(token, _get(decimals));
+                    final CompletableFuture<BigDecimal> price = _getTokenPrice(token, _get(decimals), tokenPair, _get(pairDecimals), swap);
+                    final CompletableFuture<String> pairSymbol = _getSymbol(tokenPair);
+                    return CompletableFuture.allOf(name, symbol, totalSupply, balanceOf, price, pairSymbol)
+                            .thenApply(result -> {
+                                final BigDecimal balance = _get(balanceOf);
+                                final BigDecimal p = _get(price);
+                                return TokenInfo.builder()
+                                        .address(token)
+                                        .name(_get(name))
+                                        .symbol(_get(symbol))
+                                        .totalSupply(_get(totalSupply))
+                                        .balance(_get(balanceOf))
+                                        .price(_get(price))
+                                        .decimals(_get(decimals))
+                                        .value(balance.multiply(p))
+                                        .valueSymbol(_get(pairSymbol))
+                                        .build();
+                            });
                 });
     }
 
@@ -212,9 +271,9 @@ public class DeFiSDK implements DeFi {
     }
 
     @Override
-    public CompletableFuture<List<TokenInfo>> getTokenInfoList(final List<String> tokens, final Function<String, String> tokenPair, final Function<String, String> tokenSwapRouter) {
+    public CompletableFuture<List<TokenInfo>> getTokenInfoList(final List<String> tokens, final Function<String, String> tokenPair, final Function<String, String> tokenRouter) {
         final List<CompletableFuture<TokenInfo>> list = tokens.stream()
-                .map(token -> getTokenInfo(token, tokenPair.apply(token), tokenSwapRouter.apply(token)))
+                .map(token -> getTokenInfo(token, tokenPair.apply(token), tokenRouter.apply(token)))
                 .collect(Collectors.toList());
         final CompletableFuture<TokenInfo>[] arr = new CompletableFuture[list.size()];
         list.toArray(arr);
@@ -230,18 +289,30 @@ public class DeFiSDK implements DeFi {
         return getTokenInfoList(tokens, (token) -> tokenPair, (token) -> swapRouter);
     }
 
-    private CompletableFuture<String> _getPair(final String factory, final String tokenA, final String tokenB) {
-        return _loadContract(Factory.class, factory)
-                .getPair(tokenA, tokenB)
-                .sendAsync();
+    public CompletableFuture<BigDecimal> _getTokenBalance(final String token, final BigInteger decimals) {
+        return _loadContract(ERC20.class, token)
+                .balanceOf(credentials.getAddress())
+                .sendAsync()
+                .thenApply(balanceOf -> _fromWei(balanceOf, decimals));
     }
 
     @Override
     public CompletableFuture<BigDecimal> getTokenBalance(final String token) {
-        return _loadContract(ERC20.class, token)
-                .balanceOf(credentials.getAddress())
+        return _getDecimals(token)
+                .thenCompose(decimals -> _getTokenBalance(token, decimals));
+    }
+
+    public CompletableFuture<BigDecimal> _getTokenAmountsOut(final String swapRouter, final String tokenA, final BigInteger tokenADecimals, final String tokenB, final BigInteger tokenBDecimals, final BigDecimal amount) {
+        if (Objects.equals(tokenA, tokenB)) {
+            return CompletableFuture.completedFuture(BigDecimal.ONE);
+        }
+        final BigInteger amountIn = _toWei(amount, tokenADecimals);
+        final List<String> path = Arrays.asList(tokenA, tokenB);
+        return _loadContract(Router.class, swapRouter)
+                .getAmountsOut(amountIn, path)
                 .sendAsync()
-                .thenApply(this::_fromWei);
+                .thenApply(amounts -> (BigInteger) amounts.get(1))
+                .thenApply(amountOut -> _fromWei(amountOut, tokenBDecimals));
     }
 
     @Override
@@ -249,12 +320,11 @@ public class DeFiSDK implements DeFi {
         if (Objects.equals(tokenA, tokenB)) {
             return CompletableFuture.completedFuture(BigDecimal.ONE);
         }
-        final BigInteger amountIn = _toWei(amount);
-        final List<String> path = Arrays.asList(tokenA, tokenB);
-        return _loadContract(Router.class, swapRouter)
-                .getAmountsOut(amountIn, path)
-                .sendAsync()
-                .thenApply(amounts -> _fromWei((BigInteger) amounts.get(1)));
+        final CompletableFuture<BigInteger> tokenADecimals = _getDecimals(tokenA);
+        final CompletableFuture<BigInteger> tokenBDecimals = _getDecimals(tokenB);
+        return CompletableFuture.allOf(tokenADecimals, tokenBDecimals)
+                .thenCompose(none -> _getTokenAmountsOut(swapRouter, tokenA, _get(tokenADecimals), tokenB, _get(tokenBDecimals), amount));
+
     }
 
     @Override
@@ -266,6 +336,16 @@ public class DeFiSDK implements DeFi {
     @Override
     public CompletableFuture<BigDecimal> getTokenAmountsOutMin(final String swapRouter, final String tokenA, final String tokenB, final BigDecimal amount) {
         return getTokenAmountsOutMin(swapRouter, tokenA, tokenB, amount, defaultSwapSlippage);
+    }
+
+    private CompletableFuture<BigDecimal> _getTokenPrice(
+            final String tokenA,
+            final BigInteger tokenADecimals,
+            final String tokenB,
+            final BigInteger tokenBDecimals,
+            final String swapRouter
+    ) {
+        return _getTokenAmountsOut(swapRouter, tokenA, tokenADecimals, tokenB, tokenBDecimals, BigDecimal.ONE);
     }
 
     @Override
@@ -280,7 +360,7 @@ public class DeFiSDK implements DeFi {
         final BigInteger gasPrice = _get(_getGasPrice());
         final BigInteger gasLimit = gasProvider.getGasLimit(null);
         final String to = contractAddress;
-        final BigInteger val = _toWei(value);
+        final BigInteger val = _toWei(value, BigInteger.valueOf(18)); //TODO : Fixed value
         return Transaction.createFunctionCallTransaction(from, nonce, gasPrice, gasLimit, to, val, data);
     }
 
@@ -296,7 +376,7 @@ public class DeFiSDK implements DeFi {
                                 resp.getAmountUsed(),
                                 contractAddress,
                                 data,
-                                _toWei(value)
+                                _toWei(value, BigInteger.valueOf(18)) //TODO : Fixed value
                         );
                         log.info("Tx \"{}\" : Hash = {}", func, tx.getTransactionHash());
                         return new SchedulerGetTransactionReceipt(tx.getTransactionHash()).get();
@@ -309,14 +389,17 @@ public class DeFiSDK implements DeFi {
 
     @Override
     public CompletableFuture<TransactionReceipt> tokenApprove(final String token, final BigDecimal amount, final String contractAddress) {
-        return _sendTransaction(
-                token,
-                _loadContract(ERC20.class, token)
-                        .approve(contractAddress, _toWei(amount))
-                        .encodeFunctionCall(),
-                BigDecimal.ZERO,
-                "ERC20.approve(spender, amount)"
-        );
+        return _getDecimals(token)
+                .thenCompose(decimals -> {
+                    return _sendTransaction(
+                            token,
+                            _loadContract(ERC20.class, token)
+                                    .approve(contractAddress, _toWei(amount, decimals))
+                                    .encodeFunctionCall(),
+                            BigDecimal.ZERO,
+                            "ERC20.approve(spender, amount)"
+                    );
+                });
     }
 
     private BigDecimal getAmountOutMin(final BigDecimal amount, final double slippage) {
@@ -327,40 +410,50 @@ public class DeFiSDK implements DeFi {
 
     private CompletableFuture<TransactionReceipt> _swap(final String swapRouter, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage, final int deadlineMinutes) {
         log.info("_swap(swapRouter, tokenA, tokenB, amount)");
-        return getTokenAmountsOut(swapRouter, tokenA, tokenB, amount)
-                .thenCompose(receiveAmount -> {
-                    final BigInteger amountOut = _toWei(getAmountOutMin(receiveAmount, slippage));
-                    final BigInteger deadline = BigInteger.valueOf(Instant.now().plusSeconds(60 * deadlineMinutes).toEpochMilli());
-                    final BigInteger amountIn = _toWei(amount);
-                    final List<String> path = Arrays.asList(tokenA, tokenB);
-                    log.info("amount = {}", amount);
-                    log.info("slippage = {}", slippage);
-                    log.info("receiveAmount = {}", receiveAmount);
-                    log.info("amountOut = {}", amountOut);
-                    log.info("deadline = {}", deadline);
-                    log.info("path = {}", path);
-                    return _sendTransaction(
-                            swapRouter,
-                            _loadContract(Router.class, swapRouter)
-                                    .swapExactTokensForTokens(
-                                            amountIn,
-                                            amountOut,
-                                            path,
-                                            credentials.getAddress(),
-                                            deadline
-                                    ).encodeFunctionCall(),
-                            BigDecimal.ZERO,
-                            "Router.swapExactTokensForTokens(amountIn, amountOutMin, path, to, deadline)"
-                    );
+        final CompletableFuture<BigInteger> tokenADecimals = _getDecimals(tokenA);
+        final CompletableFuture<BigInteger> tokenBDecimals = _getDecimals(tokenB);
+        return CompletableFuture.allOf(tokenADecimals, tokenBDecimals)
+                .thenCompose(none -> {
+                    final BigInteger aDecimals = _get(tokenADecimals);
+                    final BigInteger bDecimals = _get(tokenBDecimals);
+                    return _getTokenAmountsOut(swapRouter, tokenA, aDecimals, tokenB, bDecimals, amount)
+                            .thenCompose(receiveAmount -> {
+                                final BigInteger amountOut = _toWei(getAmountOutMin(receiveAmount, slippage), bDecimals);
+                                final BigInteger deadline = BigInteger.valueOf(Instant.now().plusSeconds(60 * deadlineMinutes).toEpochMilli());
+                                final BigInteger amountIn = _toWei(amount, aDecimals);
+                                final List<String> path = Arrays.asList(tokenA, tokenB);
+                                log.info("amount = {}", amount);
+                                log.info("slippage = {}", slippage);
+                                log.info("receiveAmount = {}", receiveAmount);
+                                log.info("amountOut = {}", amountOut);
+                                log.info("deadline = {}", deadline);
+                                log.info("path = {}", path);
+                                return _sendTransaction(
+                                        swapRouter,
+                                        _loadContract(Router.class, swapRouter)
+                                                .swapExactTokensForTokens(
+                                                        amountIn,
+                                                        amountOut,
+                                                        path,
+                                                        credentials.getAddress(),
+                                                        deadline
+                                                ).encodeFunctionCall(),
+                                        BigDecimal.ZERO,
+                                        "Router.swapExactTokensForTokens(amountIn, amountOutMin, path, to, deadline)"
+                                );
+                            });
                 });
     }
 
     @Override
     public CompletableFuture<BigDecimal> getTokenAllowance(final String token, final String contractAddress) {
-        return _loadContract(ERC20.class, token)
-                .allowance(credentials.getAddress(), contractAddress)
-                .sendAsync()
-                .thenApply(this::_fromWei);
+        return _getDecimals(token)
+                .thenCompose(decimals -> {
+                    return _loadContract(ERC20.class, token)
+                            .allowance(credentials.getAddress(), contractAddress)
+                            .sendAsync()
+                            .thenApply(allowance -> _fromWei(allowance, decimals));
+                });
     }
 
     @Override
@@ -418,7 +511,7 @@ public class DeFiSDK implements DeFi {
         return web3j.ethGetBalance(credentials.getAddress(), DefaultBlockParameterName.LATEST)
                 .sendAsync()
                 .thenApply(resp -> _throwIfError("ethGetBalance", resp))
-                .thenApply(resp -> _fromWei(resp.getBalance()));
+                .thenApply(resp -> _fromWei(resp.getBalance(), BigInteger.valueOf(18))); //TODO : Fixed value
     }
 
     private CompletableFuture<BigInteger> _getGasPrice() {
@@ -436,26 +529,32 @@ public class DeFiSDK implements DeFi {
 
     @Override
     public CompletableFuture<TransactionReceipt> tokenTransfer(final String token, String recipient, final BigDecimal amount) {
-        return _sendTransaction(
-                token,
-                _loadContract(ERC20.class, token)
-                        .transfer(recipient, _toWei(amount))
-                        .encodeFunctionCall(),
-                BigDecimal.ZERO,
-                "ERC20.transfer(recipient, amount)"
-        );
+        return _getDecimals(token)
+                .thenCompose(decimals -> {
+                    return _sendTransaction(
+                            token,
+                            _loadContract(ERC20.class, token)
+                                    .transfer(recipient, _toWei(amount, decimals))
+                                    .encodeFunctionCall(),
+                            BigDecimal.ZERO,
+                            "ERC20.transfer(recipient, amount)"
+                    );
+                });
     }
 
     @Override
     public CompletableFuture<TransactionReceipt> fillGas(final String gasToken, final BigDecimal amount) {
-        return _sendTransaction(
-                gasToken,
-                _loadContract(Wrapped.class, gasToken)
-                        .withdraw(_toWei(amount))
-                        .encodeFunctionCall(),
-                BigDecimal.ZERO,
-                "Wrapped.withdraw(wad)"
-        );
+        return _getDecimals(gasToken)
+                .thenCompose(decimals -> {
+                    return _sendTransaction(
+                            gasToken,
+                            _loadContract(Wrapped.class, gasToken)
+                                    .withdraw(_toWei(amount, decimals))
+                                    .encodeFunctionCall(),
+                            BigDecimal.ZERO,
+                            "Wrapped.withdraw(wad)"
+                    );
+                });
     }
 
     @Override
@@ -467,12 +566,12 @@ public class DeFiSDK implements DeFi {
     }
 
     @Override
-    public void onBlock(final Consumer<EthBlock.Block> consumer, final long throttleMillisecond) {
+    public void onBlock(final Consumer<EthBlock.Block> consumer, final long throttleMillisec) {
         if (onBlock != null) {
             onBlock.dispose();
         }
         onBlock = web3j.blockFlowable(false)
-                .throttleWithTimeout(throttleMillisecond, TimeUnit.MILLISECONDS)
+                .throttleWithTimeout(throttleMillisec, TimeUnit.MILLISECONDS)
                 .doOnNext(new io.reactivex.functions.Consumer<EthBlock>() {
                     @Override
                     public void accept(final EthBlock ethBlock) throws Exception {
