@@ -174,14 +174,14 @@ public class DeFiSDK implements DeFi {
     }
 
     @Override
-    public CompletableFuture<TokenInfo> getTokenInfo(final String token, final String tokenPair, final String router) {
+    public CompletableFuture<TokenInfo> getTokenInfo(final String token, final String tokenPair, final String swapRouter) {
         final ERC20 erc20 = _loadContract(ERC20.class, token);
         final ERC20 erc20Pair = _loadContract(ERC20.class, tokenPair);
         final CompletableFuture<String> name = erc20.name().sendAsync();
         final CompletableFuture<String> symbol = erc20.symbol().sendAsync();
         final CompletableFuture<BigInteger> totalSupply = erc20.totalSupply().sendAsync();
         final CompletableFuture<BigDecimal> balanceOf = erc20.balanceOf(credentials.getAddress()).sendAsync().thenApply(this::_fromWei);
-        final CompletableFuture<BigDecimal> price = getTokenPrice(token, tokenPair, router);
+        final CompletableFuture<BigDecimal> price = getTokenPrice(token, tokenPair, swapRouter);
         final CompletableFuture<BigInteger> decimals = erc20.decimals().sendAsync();
         final CompletableFuture<String> pairSymbol = erc20Pair.symbol().sendAsync();
         return CompletableFuture.allOf(name, symbol, totalSupply, balanceOf, price, decimals)
@@ -212,9 +212,9 @@ public class DeFiSDK implements DeFi {
     }
 
     @Override
-    public CompletableFuture<List<TokenInfo>> getTokenInfoList(final List<String> tokens, final Function<String, String> tokenPair, final Function<String, String> tokenRouter) {
+    public CompletableFuture<List<TokenInfo>> getTokenInfoList(final List<String> tokens, final Function<String, String> tokenPair, final Function<String, String> tokenSwapRouter) {
         final List<CompletableFuture<TokenInfo>> list = tokens.stream()
-                .map(token -> getTokenInfo(token, tokenPair.apply(token), tokenRouter.apply(token)))
+                .map(token -> getTokenInfo(token, tokenPair.apply(token), tokenSwapRouter.apply(token)))
                 .collect(Collectors.toList());
         final CompletableFuture<TokenInfo>[] arr = new CompletableFuture[list.size()];
         list.toArray(arr);
@@ -226,8 +226,8 @@ public class DeFiSDK implements DeFi {
     }
 
     @Override
-    public CompletableFuture<List<TokenInfo>> getTokenInfoList(final List<String> tokens, final String tokenPair, final String router) {
-        return getTokenInfoList(tokens, (token) -> tokenPair, (token) -> router);
+    public CompletableFuture<List<TokenInfo>> getTokenInfoList(final List<String> tokens, final String tokenPair, final String swapRouter) {
+        return getTokenInfoList(tokens, (token) -> tokenPair, (token) -> swapRouter);
     }
 
     private CompletableFuture<String> _getPair(final String factory, final String tokenA, final String tokenB) {
@@ -245,32 +245,32 @@ public class DeFiSDK implements DeFi {
     }
 
     @Override
-    public CompletableFuture<BigDecimal> getTokenAmountsOut(final String router, final String tokenA, final String tokenB, final BigDecimal amount) {
+    public CompletableFuture<BigDecimal> getTokenAmountsOut(final String swapRouter, final String tokenA, final String tokenB, final BigDecimal amount) {
         if (Objects.equals(tokenA, tokenB)) {
             return CompletableFuture.completedFuture(BigDecimal.ONE);
         }
         final BigInteger amountIn = _toWei(amount);
         final List<String> path = Arrays.asList(tokenA, tokenB);
-        return _loadContract(Router.class, router)
+        return _loadContract(Router.class, swapRouter)
                 .getAmountsOut(amountIn, path)
                 .sendAsync()
                 .thenApply(amounts -> _fromWei((BigInteger) amounts.get(1)));
     }
 
     @Override
-    public CompletableFuture<BigDecimal> getTokenAmountsOutMin(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage) {
-        return getTokenAmountsOut(router, tokenA, tokenB, amount)
+    public CompletableFuture<BigDecimal> getTokenAmountsOutMin(final String swapRouter, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage) {
+        return getTokenAmountsOut(swapRouter, tokenA, tokenB, amount)
                 .thenApply(out -> getAmountOutMin(out, slippage));
     }
 
     @Override
-    public CompletableFuture<BigDecimal> getTokenAmountsOutMin(final String router, final String tokenA, final String tokenB, final BigDecimal amount) {
-        return getTokenAmountsOutMin(router, tokenA, tokenB, amount, defaultSwapSlippage);
+    public CompletableFuture<BigDecimal> getTokenAmountsOutMin(final String swapRouter, final String tokenA, final String tokenB, final BigDecimal amount) {
+        return getTokenAmountsOutMin(swapRouter, tokenA, tokenB, amount, defaultSwapSlippage);
     }
 
     @Override
-    public CompletableFuture<BigDecimal> getTokenPrice(final String tokenA, final String tokenB, final String router) {
-        return getTokenAmountsOut(router, tokenA, tokenB, BigDecimal.ONE);
+    public CompletableFuture<BigDecimal> getTokenPrice(final String tokenA, final String tokenB, final String swapRouter) {
+        return getTokenAmountsOut(swapRouter, tokenA, tokenB, BigDecimal.ONE);
     }
 
     private Transaction _createTransaction(final String contractAddress, final String data, final BigDecimal value) {
@@ -325,9 +325,9 @@ public class DeFiSDK implements DeFi {
         return amount.subtract(base);
     }
 
-    private CompletableFuture<TransactionReceipt> _swap(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage, final int deadlineMinutes) {
-        log.info("_swap(router, tokenA, tokenB, amount)");
-        return getTokenAmountsOut(router, tokenA, tokenB, amount)
+    private CompletableFuture<TransactionReceipt> _swap(final String swapRouter, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage, final int deadlineMinutes) {
+        log.info("_swap(swapRouter, tokenA, tokenB, amount)");
+        return getTokenAmountsOut(swapRouter, tokenA, tokenB, amount)
                 .thenCompose(receiveAmount -> {
                     final BigInteger amountOut = _toWei(getAmountOutMin(receiveAmount, slippage));
                     final BigInteger deadline = BigInteger.valueOf(Instant.now().plusSeconds(60 * deadlineMinutes).toEpochMilli());
@@ -340,8 +340,8 @@ public class DeFiSDK implements DeFi {
                     log.info("deadline = {}", deadline);
                     log.info("path = {}", path);
                     return _sendTransaction(
-                            router,
-                            _loadContract(Router.class, router)
+                            swapRouter,
+                            _loadContract(Router.class, swapRouter)
                                     .swapExactTokensForTokens(
                                             amountIn,
                                             amountOut,
@@ -364,53 +364,53 @@ public class DeFiSDK implements DeFi {
     }
 
     @Override
-    public CompletableFuture<TransactionReceipt> tokenSwap(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage, final int deadlineMinutes) {
-        return getTokenAllowance(tokenA, router)
+    public CompletableFuture<TransactionReceipt> tokenSwap(final String swapRouter, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage, final int deadlineMinutes) {
+        return getTokenAllowance(tokenA, swapRouter)
                 .thenCompose(allowance -> {
-                    log.info("Allowance Token \"{}\" amount {} for Contract \"{}\"", tokenA, allowance, router);
+                    log.info("Allowance Token \"{}\" amount {} for Contract \"{}\"", tokenA, allowance, swapRouter);
                     boolean isLessThan = allowance.compareTo(amount) < 0;
                     if (isLessThan) {
                         throw new RuntimeException("Please call .tokenApprove(token, amount, contractAddress) before swap");
                     }
-                    return _swap(router, tokenA, tokenB, amount, slippage, deadlineMinutes);
+                    return _swap(swapRouter, tokenA, tokenB, amount, slippage, deadlineMinutes);
                 });
     }
 
     @Override
-    public CompletableFuture<TransactionReceipt> tokenSwap(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage) {
-        return tokenSwap(router, tokenA, tokenB, amount, slippage, defaultSwapDeadlineMinutes);
+    public CompletableFuture<TransactionReceipt> tokenSwap(final String swapRouter, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage) {
+        return tokenSwap(swapRouter, tokenA, tokenB, amount, slippage, defaultSwapDeadlineMinutes);
     }
 
     @Override
-    public CompletableFuture<TransactionReceipt> tokenSwap(final String router, final String tokenA, final String tokenB, final BigDecimal amount) {
-        return tokenSwap(router, tokenA, tokenB, amount, defaultSwapSlippage);
+    public CompletableFuture<TransactionReceipt> tokenSwap(final String swapRouter, final String tokenA, final String tokenB, final BigDecimal amount) {
+        return tokenSwap(swapRouter, tokenA, tokenB, amount, defaultSwapSlippage);
     }
 
     @Override
-    public CompletableFuture<TransactionReceipt> tokenSwapAndAutoApprove(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage, final int deadlineMinutes) {
-        return getTokenAllowance(tokenA, router)
+    public CompletableFuture<TransactionReceipt> tokenSwapAndAutoApprove(final String swapRouter, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage, final int deadlineMinutes) {
+        return getTokenAllowance(tokenA, swapRouter)
                 .thenCompose(allowance -> {
-                    log.info("Allowance Token \"{}\" amount {} for Contract \"{}\"", tokenA, allowance, router);
+                    log.info("Allowance Token \"{}\" amount {} for Contract \"{}\"", tokenA, allowance, swapRouter);
                     boolean isLessThan = allowance.compareTo(amount) < 0;
                     if (isLessThan) {
                         final BigDecimal times = BigDecimal.valueOf(tokenAutoApproveNTimes);
                         final BigDecimal approvedAmount = times.multiply(amount);
                         log.info("Approved amount = {}", approvedAmount);
-                        return tokenApprove(tokenA, approvedAmount, router)
-                                .thenCompose(tx -> _swap(router, tokenA, tokenB, amount, slippage, deadlineMinutes));
+                        return tokenApprove(tokenA, approvedAmount, swapRouter)
+                                .thenCompose(tx -> _swap(swapRouter, tokenA, tokenB, amount, slippage, deadlineMinutes));
                     }
-                    return _swap(router, tokenA, tokenB, amount, slippage, deadlineMinutes);
+                    return _swap(swapRouter, tokenA, tokenB, amount, slippage, deadlineMinutes);
                 });
     }
 
     @Override
-    public CompletableFuture<TransactionReceipt> tokenSwapAndAutoApprove(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage) {
-        return tokenSwapAndAutoApprove(router, tokenA, tokenB, amount, slippage, defaultSwapDeadlineMinutes);
+    public CompletableFuture<TransactionReceipt> tokenSwapAndAutoApprove(final String swapRouter, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage) {
+        return tokenSwapAndAutoApprove(swapRouter, tokenA, tokenB, amount, slippage, defaultSwapDeadlineMinutes);
     }
 
     @Override
-    public CompletableFuture<TransactionReceipt> tokenSwapAndAutoApprove(final String router, final String tokenA, final String tokenB, final BigDecimal amount) {
-        return tokenSwapAndAutoApprove(router, tokenA, tokenB, amount, defaultSwapSlippage);
+    public CompletableFuture<TransactionReceipt> tokenSwapAndAutoApprove(final String swapRouter, final String tokenA, final String tokenB, final BigDecimal amount) {
+        return tokenSwapAndAutoApprove(swapRouter, tokenA, tokenB, amount, defaultSwapSlippage);
     }
 
     @Override
@@ -459,20 +459,20 @@ public class DeFiSDK implements DeFi {
     }
 
     @Override
-    public CompletableFuture<TransactionReceipt> tokenSwapAndFillGas(final String router, final String token, final String gasToken, final BigDecimal amount) {
-        return getTokenAmountsOutMin(router, token, gasToken, amount)
-                .thenCompose(amountOut -> tokenSwapAndAutoApprove(router, token, gasToken, amount)
+    public CompletableFuture<TransactionReceipt> tokenSwapAndFillGas(final String swapRouter, final String token, final String gasToken, final BigDecimal amount) {
+        return getTokenAmountsOutMin(swapRouter, token, gasToken, amount)
+                .thenCompose(amountOut -> tokenSwapAndAutoApprove(swapRouter, token, gasToken, amount)
                         .thenCompose(tx -> fillGas(gasToken, amountOut))
                 );
     }
 
     @Override
-    public void onBlock(final Consumer<EthBlock.Block> consumer, final long throttleMillisec) {
+    public void onBlock(final Consumer<EthBlock.Block> consumer, final long throttleMillisecond) {
         if (onBlock != null) {
             onBlock.dispose();
         }
         onBlock = web3j.blockFlowable(false)
-                .throttleWithTimeout(throttleMillisec, TimeUnit.MILLISECONDS)
+                .throttleWithTimeout(throttleMillisecond, TimeUnit.MILLISECONDS)
                 .doOnNext(new io.reactivex.functions.Consumer<EthBlock>() {
                     @Override
                     public void accept(final EthBlock ethBlock) throws Exception {

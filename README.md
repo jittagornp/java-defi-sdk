@@ -74,7 +74,7 @@ CompletableFuture<BigDecimal> getTokenBalance(final String token);
 ดูจำนวน Token B ที่จะได้รับ เมื่อนำ Token A ไปแลกบน Router (DEX/AMM)
 
 ```java
-CompletableFuture<BigDecimal> getTokenAmountsOut(final String router, final String tokenA, final String tokenB, final BigDecimal amount);
+CompletableFuture<BigDecimal> getTokenAmountsOut(final String swapRouter, final String tokenA, final String tokenB, final BigDecimal amount);
 ```
 
 ### Get Token Price
@@ -82,7 +82,7 @@ CompletableFuture<BigDecimal> getTokenAmountsOut(final String router, final Stri
 ดูราคา Token A เทียบกับ Token B บน Router (DEX/AMM)
 
 ```java
-CompletableFuture<BigDecimal> getTokenPrice(final String tokenA, final String tokenB, final String router);
+CompletableFuture<BigDecimal> getTokenPrice(final String tokenA, final String tokenB, final String swapRouter);
 ```
 
 ### Get Token Info
@@ -90,7 +90,7 @@ CompletableFuture<BigDecimal> getTokenPrice(final String tokenA, final String to
 ดูข้อมูล Token + เทียบราคากับ Token Pair บน Router (DEX/AMM)
 
 ```java
-CompletableFuture<TokenInfo> getTokenInfo(final String token, final String tokenPair, final String router);
+CompletableFuture<TokenInfo> getTokenInfo(final String token, final String tokenPair, final String swapRouter);
 ```
 
 ### Get Token Info List
@@ -130,7 +130,7 @@ CompletableFuture<TransactionReceipt> tokenApprove(final String token, final Big
 การแลกเปลี่ยน (Swap) Token จาก A -> B บน Router (DEX/AMM)
 
 ```java
-CompletableFuture<TransactionReceipt> tokenSwap(final String router, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage, final int deadlineMinutes);
+CompletableFuture<TransactionReceipt> tokenSwap(final String swapRouter, final String tokenA, final String tokenB, final BigDecimal amount, final double slippage, final int deadlineMinutes);
 ```
 
 ### Fill Gas
@@ -143,15 +143,15 @@ CompletableFuture<TransactionReceipt> fillGas(final String token, final BigDecim
 
 ### Token Swap and Fill Gas
 
-การแลกเปลี่ยน (Swap) Token จาก A -> B บน Router (DEX/AMM) แล้วเติม Gas
+การแลกเปลี่ยน (Swap) Token จาก A -> Gas Token บน Router (DEX/AMM) แล้วเติม Gas (ซื้อแล้วเติม Gas)
 
 ```java
-CompletableFuture<TransactionReceipt> tokenSwapAndFillGas(final String router, final String token, final String gasToken, final BigDecimal amount);
+CompletableFuture<TransactionReceipt> tokenSwapAndFillGas(final String swapRouter, final String token, final String gasToken, final BigDecimal amount);
 ```
 
 ### On Block
 
-เรียกเมื่อมี Block เกิดใหม่
+เรียกเมื่อมี Block ใหม่เกิดขึ้น
 
 ```java
 void onBlock(final Consumer<EthBlock.Block> consumer);
