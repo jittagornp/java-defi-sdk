@@ -155,9 +155,8 @@ public class DeFiSDK implements DeFi {
     }
 
     private BigInteger _toWei(final BigDecimal value, final BigInteger decimals) {
-        final BigInteger val = new BigInteger(value.toString());
         final int d = decimals.intValue();
-        return val.multiply(BigInteger.TEN.pow(d));
+        return value.multiply(BigDecimal.TEN.pow(d)).toBigInteger();
     }
 
     private BigDecimal _fromGwei(final BigInteger ether) {
