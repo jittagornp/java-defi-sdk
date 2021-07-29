@@ -14,6 +14,7 @@ import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.Web3jService;
 import org.web3j.protocol.core.DefaultBlockParameterName;
+import org.web3j.protocol.core.RemoteFunctionCall;
 import org.web3j.protocol.core.Response;
 import org.web3j.protocol.core.methods.request.Transaction;
 import org.web3j.protocol.core.methods.response.EthBlock;
@@ -181,52 +182,32 @@ public class DeFiSDK implements DeFi {
                 .thenApply(totalSupply -> _fromWei(totalSupply, decimals));
     }
 
-    private CompletableFuture<BigInteger> _getDecimals(final String token) {
-        final String key = token + ".decimals";
-        final BigInteger decimals = (BigInteger) cached.get(key);
-        if (decimals == null) {
-            return _loadContract(ERC20.class, token)
-                    .decimals()
-                    .sendAsync()
-                    .thenApply(value -> {
-                        cached.put(key, value);
-                        return value;
+    private <T> CompletableFuture<T> _cacheValue(final String key, final RemoteFunctionCall<T> functionCall) {
+        final T value = (T) cached.get(key);
+        if (value == null) {
+            return functionCall.sendAsync()
+                    .thenApply(val -> {
+                        cached.put(key, val);
+                        return val;
                     });
         } else {
-            return CompletableFuture.completedFuture(decimals);
+            return CompletableFuture.completedFuture(value);
         }
+    }
+
+    private CompletableFuture<BigInteger> _getDecimals(final String token) {
+        final String key = token + ".decimals";
+        return _cacheValue(key, _loadContract(ERC20.class, token).decimals());
     }
 
     private CompletableFuture<String> _getName(final String token) {
         final String key = token + ".name";
-        final String name = (String) cached.get(key);
-        if (name == null) {
-            return _loadContract(ERC20.class, token)
-                    .name()
-                    .sendAsync()
-                    .thenApply(value -> {
-                        cached.put(key, value);
-                        return value;
-                    });
-        } else {
-            return CompletableFuture.completedFuture(name);
-        }
+        return _cacheValue(key, _loadContract(ERC20.class, token).name());
     }
 
     private CompletableFuture<String> _getSymbol(final String token) {
         final String key = token + ".symbol";
-        final String symbol = (String) cached.get(key);
-        if (symbol == null) {
-            return _loadContract(ERC20.class, token)
-                    .symbol()
-                    .sendAsync()
-                    .thenApply(value -> {
-                        cached.put(key, value);
-                        return value;
-                    });
-        } else {
-            return CompletableFuture.completedFuture(symbol);
-        }
+        return _cacheValue(key, _loadContract(ERC20.class, token).symbol());
     }
 
     @Override
