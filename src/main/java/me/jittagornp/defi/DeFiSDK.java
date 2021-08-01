@@ -64,7 +64,7 @@ public class DeFiSDK implements DeFi {
         this.network = network;
         this.credentials = credentials;
         this.web3j = Web3j.build(web3jService);
-        this.transactionManager = new RawTransactionManager(web3j, credentials);
+        this.transactionManager = new RawTransactionManager(web3j, credentials, network.getChainId());
         log.info("Wallet address : {}", getWalletShortAddress());
     }
 
@@ -341,14 +341,16 @@ public class DeFiSDK implements DeFi {
                 .thenApply(resp -> _throwIfError("ethEstimateGas", resp))
                 .thenCompose(resp -> {
                     try {
-                        log.info("Tx \"{}\" : Estimate gas limit = {}", func, resp.getAmountUsed());
+                        final BigInteger gasPrice = _get(_getGasPrice());
+                        log.info("Tx \"{}\" : Estimate gas limit = {}, gas price = {}", func, resp.getAmountUsed(), gasPrice);
                         final EthSendTransaction tx = transactionManager.sendTransaction(
-                                _get(_getGasPrice()),
+                                gasPrice,
                                 resp.getAmountUsed(),
                                 contractAddress,
                                 data,
                                 _toWei(value, BigInteger.valueOf(18)) //TODO : Fixed value
                         );
+                        _throwIfError("transactionManager.sendTransaction", tx);
                         log.info("Tx \"{}\" : Hash = {}", func, tx.getTransactionHash());
                         return new SchedulerGetTransactionReceipt(tx.getTransactionHash()).get();
                     } catch (IOException e) {
@@ -571,6 +573,9 @@ public class DeFiSDK implements DeFi {
         }
 
         public SchedulerGetTransactionReceipt(final String transactionHash, final long waitMilliseconds, final long expiresMilliseconds) {
+            if (transactionHash == null || transactionHash.isEmpty()) {
+                throw new IllegalArgumentException("Required transactionHash");
+            }
             this.transactionHash = transactionHash;
             this.waitMilliseconds = waitMilliseconds;
             this.expiresMilliseconds = expiresMilliseconds;

@@ -19,8 +19,18 @@ import java.util.function.Function;
 public interface DeFi {
 
     enum Network {
-        BSC_MAINNET,
-        POLYGON_MAINNET
+        BSC_MAINNET(56L),
+        POLYGON_MAINNET(137L);
+
+        private final long chainId;
+
+        private Network(final long chainId) {
+            this.chainId = chainId;
+        }
+
+        public long getChainId() {
+            return chainId;
+        }
     }
 
     Network getNetwork();
