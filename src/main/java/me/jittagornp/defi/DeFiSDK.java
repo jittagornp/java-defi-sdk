@@ -60,10 +60,10 @@ public class DeFiSDK implements DeFi {
     private final Map<String, Object> cached = new HashMap<>();
     private Disposable onBlock;
 
-    protected DeFiSDK(final Network network, final Credentials credentials, final Web3jService web3jService) {
+    protected DeFiSDK(final Network network, final Credentials credentials) {
         this.network = network;
         this.credentials = credentials;
-        this.web3j = Web3j.build(web3jService);
+        this.web3j = Web3j.build(new HttpService(network.getRpcURL()));
         this.transactionManager = new RawTransactionManager(web3j, credentials, network.getChainId());
         log.info("Wallet address : {}", getWalletShortAddress());
     }
@@ -77,15 +77,23 @@ public class DeFiSDK implements DeFi {
             return polygonMainnet(credentials);
         }
 
+        if (network == Network.BITKUB_MAINNET) {
+            return bitkubMainnet(credentials);
+        }
+
         throw new UnsupportedOperationException("Unsupported network " + network);
     }
 
     public static DeFiSDK bscMainnet(final Credentials credentials) {
-        return new DeFiSDK(Network.BSC_MAINNET, credentials, new HttpService("https://bsc-dataseed1.binance.org"));
+        return new DeFiSDK(Network.BSC_MAINNET, credentials);
     }
 
     public static DeFiSDK polygonMainnet(final Credentials credentials) {
-        return new DeFiSDK(Network.POLYGON_MAINNET, credentials, new HttpService("https://rpc-mainnet.maticvigil.com"));
+        return new DeFiSDK(Network.POLYGON_MAINNET, credentials);
+    }
+
+    public static DeFiSDK bitkubMainnet(final Credentials credentials) {
+        return new DeFiSDK(Network.BITKUB_MAINNET, credentials);
     }
 
     @Override

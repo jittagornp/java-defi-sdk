@@ -3,6 +3,7 @@
  */
 package me.jittagornp.defi;
 
+import lombok.Getter;
 import me.jittagornp.defi.model.TokenInfo;
 import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
@@ -18,19 +19,54 @@ import java.util.function.Function;
  */
 public interface DeFi {
 
+    @Getter
     enum Network {
-        BSC_MAINNET(56L),
-        POLYGON_MAINNET(137L);
+        BSC_MAINNET(
+                "Binance Smart Chain",
+                56L,
+                "https://bsc-dataseed.binance.org",
+                "BNB",
+                "https://bscscan.com"
+        ),
+        POLYGON_MAINNET(
+                "Polygon (POS) Chain",
+                137L,
+                "https://rpc-mainnet.maticvigil.com",
+                "MATIC",
+                "https://polygonscan.com"
+        ),
+        BITKUB_MAINNET(
+                "Bitkub Chain",
+                96L,
+                "https://rpc.bitkubchain.io",
+                "KUB",
+                "https://bkcscan.com"
+        );
+
+        private final String name;
 
         private final long chainId;
 
-        private Network(final long chainId) {
+        private final String rpcURL;
+
+        private final String gasSymbol;
+
+        private final String explorerURL;
+
+        private Network(
+                final String name,
+                final long chainId,
+                final String rpcURL,
+                final String gasSymbol,
+                final String explorerURL
+        ) {
+            this.name = name;
             this.chainId = chainId;
+            this.rpcURL = rpcURL;
+            this.gasSymbol = gasSymbol;
+            this.explorerURL = explorerURL;
         }
 
-        public long getChainId() {
-            return chainId;
-        }
     }
 
     Network getNetwork();
