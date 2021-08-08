@@ -570,7 +570,7 @@ public class DeFiSDK implements DeFi {
     }
 
     @Override
-    public void onTransfer(final String token, final Consumer<ERC20.TransferEventResponse> consumer) {
+    public void onTransfer(final String token, final Consumer<TransferEvent> consumer) {
         Disposable disposable = onTransferMap.get(token);
         if (disposable != null) {
             disposable.dispose();
@@ -579,8 +579,16 @@ public class DeFiSDK implements DeFi {
                 .transferEventFlowable(DefaultBlockParameterName.LATEST, DefaultBlockParameterName.LATEST)
                 .onErrorReturnItem(new ERC20.TransferEventResponse())
                 .filter(event -> Objects.equals(event.from, getWalletAddress()) || Objects.equals(event.to, getWalletAddress()))
+                .map(event -> TransferEvent.builder()
+                        .token(token)
+                        .from(event.from)
+                        .to(event.to)
+                        .value(event.value)
+                        .log(event.log)
+                        .build()
+                )
                 .subscribe(event -> {
-                    log.info("Transfer => from \"{}\" to \"{}\" value {} log {}", event.from, event.to, event.value, event.log);
+                    log.info("Transfer => from \"{}\" to \"{}\" value {} log {}", event.getFrom(), event.getTo(), event.getValue(), event.getLog());
                     consumer.accept(event);
                 });
         onTransferMap.put(token, disposable);

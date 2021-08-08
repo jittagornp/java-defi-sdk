@@ -3,14 +3,16 @@
  */
 package me.jittagornp.defi;
 
+import lombok.Builder;
+import lombok.Data;
 import lombok.Getter;
 import me.jittagornp.defi.model.TokenInfo;
-import me.jittagornp.defi.smartcontract.ERC20;
 import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.Log;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -135,5 +137,21 @@ public interface DeFi {
 
     void onBlock(final Consumer<EthBlock.Block> consumer);
 
-    void onTransfer(final String token, final Consumer<ERC20.TransferEventResponse> consumer);
+    void onTransfer(final String token, final Consumer<TransferEvent> consumer);
+
+    @Data
+    @Builder
+    class TransferEvent {
+
+        private String token;
+
+        private String from;
+
+        private String to;
+
+        private BigInteger value;
+
+        private Log log;
+
+    }
 }
