@@ -25,8 +25,8 @@ public class DeFiTest {
 
         final Credentials credentials = WalletUtils.loadCredentials(WALLET_PASSWORD, new File(WALLET_DIRECTORY, WALLET_FILE_NAME));
 
-        //bsc(credentials);
-        polygon(credentials);
+        bsc(credentials);
+        //polygon(credentials);
         //bitkub(credentials);
     }
 
@@ -58,6 +58,7 @@ public class DeFiTest {
         //deFi.fillGas(WBNB, deFi.getTokenBalance(WBNB).get()).thenAccept(log("Fill Gas Tx")).get();
         //deFi.tokenSwapAndFillGas(pancakeSwapRouter, BUSD, WBNB, BigDecimal.ONE).thenAccept(log("Swap and Fill Gas Tx")).get();
         //deFi.onBlock(block -> log("Block number").accept(block.getNumber()));
+        deFi.onTransfer(BUSD, log("Event Transfer"));
     }
 
     private static void polygon(final Credentials credentials) throws Exception {
@@ -88,11 +89,12 @@ public class DeFiTest {
         //deFi.fillGas(WMATIC, deFi.getTokenBalance(WMATIC).get()).thenAccept(log("Fill Gas Tx")).get();
         //deFi.tokenSwapAndFillGas(quickSwapRouter, USDC, WMATIC, BigDecimal.ONE).thenAccept(log("Swap and Fill Gas Tx")).get();
         //deFi.onBlock(block -> log("Block number").accept(block.getNumber()));
+        deFi.onTransfer(USDC, log("Event Transfer"));
     }
 
     private static void bitkub(final Credentials credentials) throws Exception {
 
-        final String vonderRouter = "0x54D851C39fE28b2E24e354B5E8c0f09EfC65B51A";
+        final String foodcourtRouter = "0xa93F69529826918A38127a76c366cA1445Fc1158";
         final String KKUB = "0x67eBD850304c70d983B2d1b93ea79c7CD6c3F6b5";
         final String kDAI = "0xED7B8606270295d1b3b60b99c051de4D7D2f7ff2";
 
@@ -103,21 +105,22 @@ public class DeFiTest {
 
         deFi.getGasPrice().thenAccept(log("Gas price")).get();
         deFi.getGasBalance().thenAccept(log("Gas balance")).get();
-        deFi.getTokenAmountsOut(vonderRouter, KKUB, kDAI, BigDecimal.ONE).thenAccept(log("KKUB Amount out")).get();
-        deFi.getTokenPrice(KKUB, kDAI, vonderRouter).thenAccept(log("KKUB Price")).get();
-        deFi.getTokenInfo(KKUB, kDAI, vonderRouter).thenAccept(log("KKUB")).get();
-        deFi.getTokenInfo(kDAI, kDAI, vonderRouter).thenAccept(log("kDAI")).get();
-        deFi.getTokenAllowance(kDAI, vonderRouter).thenAccept(log("Token allowance")).get();
-        //deFi.tokenApprove(kDAI, BigDecimal.valueOf(2.433), vonderRouter).thenAccept(log("Approve Tx")).get();
-        //deFi.tokenSwap(vonderRouter, KKUB, kDAI, BigDecimal.valueOf(5.8)).thenAccept(log("Swap Tx")).get();
-        //deFi.tokenSwapAndAutoApprove(vonderRouter, KKUB, kDAI, BigDecimal.valueOf(5.8)).thenAccept(log("Swap Tx")).get();
+        deFi.getTokenAmountsOut(foodcourtRouter, KKUB, kDAI, BigDecimal.ONE).thenAccept(log("KKUB Amount out")).get();
+        deFi.getTokenPrice(KKUB, kDAI, foodcourtRouter).thenAccept(log("KKUB Price")).get();
+        deFi.getTokenInfo(KKUB, kDAI, foodcourtRouter).thenAccept(log("KKUB")).get();
+        deFi.getTokenInfo(kDAI, kDAI, foodcourtRouter).thenAccept(log("kDAI")).get();
+        deFi.getTokenAllowance(kDAI, foodcourtRouter).thenAccept(log("Token allowance")).get();
+        //deFi.tokenApprove(kDAI, BigDecimal.valueOf(2.433), foodcourtRouter).thenAccept(log("Approve Tx")).get();
+        //deFi.tokenSwap(foodcourtRouter, KKUB, kDAI, BigDecimal.valueOf(5.8)).thenAccept(log("Swap Tx")).get();
+        //deFi.tokenSwapAndAutoApprove(foodcourtRouter, KKUB, kDAI, BigDecimal.valueOf(5.8)).thenAccept(log("Swap Tx")).get();
         //deFi.tokenTransfer(KKUB, "<Target>", BigDecimal.valueOf(0.0013)).thenAccept(log("Transfer Tx")).get();
-        //deFi.tokenApprove(KKUB, BigDecimal.TEN, vonderRouter).thenAccept(log("Token Approve Tx")).get();
-        //deFi.tokenSwap(vonderRouter, kDAI, KKUB, deFi.getTokenBalance(kDAI).get()).thenAccept(log("Swap Tx")).get();
-        //deFi.tokenSwap(vonderRouter, KKUB, kDAI, deFi.getTokenBalance(KKUB).get()).thenAccept(log("Swap Tx")).get();
+        //deFi.tokenApprove(KKUB, BigDecimal.TEN, foodcourtRouter).thenAccept(log("Token Approve Tx")).get();
+        //deFi.tokenSwap(foodcourtRouter, kDAI, KKUB, deFi.getTokenBalance(kDAI).get()).thenAccept(log("Swap Tx")).get();
+        //deFi.tokenSwap(foodcourtRouter, KKUB, kDAI, deFi.getTokenBalance(KKUB).get()).thenAccept(log("Swap Tx")).get();
         //deFi.fillGas(KKUB, deFi.getTokenBalance(KKUB).get()).thenAccept(log("Fill Gas Tx")).get();
-        //deFi.tokenSwapAndFillGas(vonderRouter, kDAI, KKUB, BigDecimal.ONE).thenAccept(log("Swap and Fill Gas Tx")).get();
+        //deFi.tokenSwapAndFillGas(foodcourtRouter, kDAI, KKUB, BigDecimal.ONE).thenAccept(log("Swap and Fill Gas Tx")).get();
         //deFi.onBlock(block -> log("Block number").accept(block.getNumber()));
+        deFi.onTransfer(kDAI, log("Event Transfer"));
     }
 
     private static <T> Consumer<T> log(final String message) {

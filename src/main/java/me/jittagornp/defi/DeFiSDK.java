@@ -9,10 +9,11 @@ import io.reactivex.disposables.Disposable;
 import lombok.extern.slf4j.Slf4j;
 import me.jittagornp.defi.exception.ResponseErrorException;
 import me.jittagornp.defi.model.TokenInfo;
-import me.jittagornp.defi.smartcontract.*;
+import me.jittagornp.defi.smartcontract.ERC20;
+import me.jittagornp.defi.smartcontract.Router;
+import me.jittagornp.defi.smartcontract.Wrapped;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
-import org.web3j.protocol.Web3jService;
 import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.RemoteFunctionCall;
 import org.web3j.protocol.core.Response;
@@ -59,6 +60,7 @@ public class DeFiSDK implements DeFi {
     private final ContractGasProvider gasProvider = new DefaultGasProvider();
     private final Map<String, Object> cached = new HashMap<>();
     private Disposable onBlock;
+    private Disposable onTransfer;
 
     protected DeFiSDK(final Network network, final Credentials credentials) {
         this.network = network;
@@ -524,7 +526,8 @@ public class DeFiSDK implements DeFi {
     }
 
     @Override
-    public CompletableFuture<TransactionReceipt> fillGas(final String gasToken, final BigDecimal amount) {
+    public CompletableFuture<TransactionReceipt> fillGas(final BigDecimal amount) {
+        final String gasToken = network.getGasWrappedToken();
         return _getDecimals(gasToken)
                 .thenCompose(decimals -> {
                     return _sendTransaction(
@@ -539,10 +542,11 @@ public class DeFiSDK implements DeFi {
     }
 
     @Override
-    public CompletableFuture<TransactionReceipt> tokenSwapAndFillGas(final String swapRouter, final String token, final String gasToken, final BigDecimal amount) {
+    public CompletableFuture<TransactionReceipt> tokenSwapAndFillGas(final String swapRouter, final String token, final BigDecimal amount) {
+        final String gasToken = network.getGasWrappedToken();
         return getTokenAmountsOutMin(swapRouter, token, gasToken, amount)
                 .thenCompose(amountOut -> tokenSwapAndAutoApprove(swapRouter, token, gasToken, amount)
-                        .thenCompose(tx -> fillGas(gasToken, amountOut))
+                        .thenCompose(tx -> fillGas(amountOut))
                 );
     }
 
@@ -553,20 +557,31 @@ public class DeFiSDK implements DeFi {
         }
         onBlock = web3j.blockFlowable(false)
                 .throttleWithTimeout(throttleMillisec, TimeUnit.MILLISECONDS)
-                .doOnNext(new io.reactivex.functions.Consumer<EthBlock>() {
-                    @Override
-                    public void accept(final EthBlock ethBlock) throws Exception {
-                        if (ethBlock.getError() == null) {
-                            consumer.accept(ethBlock.getBlock());
-                        }
+                .subscribe(ethBlock -> {
+                    if (!ethBlock.hasError()) {
+                        consumer.accept(ethBlock.getBlock());
                     }
-                })
-                .subscribe();
+                });
     }
 
     @Override
     public void onBlock(final Consumer<EthBlock.Block> consumer) {
         onBlock(consumer, 300);
+    }
+
+    @Override
+    public void onTransfer(final String token, final Consumer<ERC20.TransferEventResponse> consumer) {
+        if (onTransfer != null) {
+            onTransfer.dispose();
+        }
+        onTransfer = _loadContract(ERC20.class, token)
+                .transferEventFlowable(DefaultBlockParameterName.LATEST, DefaultBlockParameterName.LATEST)
+                .onErrorReturnItem(new ERC20.TransferEventResponse())
+                .filter(event -> Objects.equals(event.from, getWalletAddress()) || Objects.equals(event.to, getWalletAddress()))
+                .subscribe(event -> {
+                    log.info("Transfer => from \"{}\" to \"{}\" value {} log {}", event.from, event.to, event.value, event.log);
+                    consumer.accept(event);
+                });
     }
 
     private class SchedulerGetTransactionReceipt {
