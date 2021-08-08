@@ -60,7 +60,7 @@ public class DeFiSDK implements DeFi {
     private final ContractGasProvider gasProvider = new DefaultGasProvider();
     private final Map<String, Object> cached = new HashMap<>();
     private Disposable onBlock;
-    private Disposable onTransfer;
+    private Map<String, Disposable> onTransferMap = new HashMap<>();
 
     protected DeFiSDK(final Network network, final Credentials credentials) {
         this.network = network;
@@ -571,10 +571,11 @@ public class DeFiSDK implements DeFi {
 
     @Override
     public void onTransfer(final String token, final Consumer<ERC20.TransferEventResponse> consumer) {
-        if (onTransfer != null) {
-            onTransfer.dispose();
+        Disposable disposable = onTransferMap.get(token);
+        if (disposable != null) {
+            disposable.dispose();
         }
-        onTransfer = _loadContract(ERC20.class, token)
+        disposable = _loadContract(ERC20.class, token)
                 .transferEventFlowable(DefaultBlockParameterName.LATEST, DefaultBlockParameterName.LATEST)
                 .onErrorReturnItem(new ERC20.TransferEventResponse())
                 .filter(event -> Objects.equals(event.from, getWalletAddress()) || Objects.equals(event.to, getWalletAddress()))
@@ -582,6 +583,7 @@ public class DeFiSDK implements DeFi {
                     log.info("Transfer => from \"{}\" to \"{}\" value {} log {}", event.from, event.to, event.value, event.log);
                     consumer.accept(event);
                 });
+        onTransferMap.put(token, disposable);
     }
 
     private class SchedulerGetTransactionReceipt {
